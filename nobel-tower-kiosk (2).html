@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiosk Nobel Tower</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nobel Tower">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Układ kiosku: po lewej lista celów i kroki trasy, po prawej plan parteru.
+   Paleta z logo Nobel Tower (grafit i trzy zielenie rombów), romb jako motyw znaczników pięter.
+   Jedna jasna wersja, bo ekran pracuje w jasnym holu. */
+:root{
+  --f-d:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif;
+  --f-b:'Barlow',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --bg:#EEF2EF; --panel:#FFFFFF; --panel-2:#F4F7F5; --ink:#404040; --muted:#66726B; --line:#D6DED9;
+  --g:#087838; --g-lt:#50B058; --g-dk:#084820; --g-tint:#E3F1E6;
+  --plan-bg:#F7F9F8; --plan-street:#E4EAE6; --wall:#404040;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 18px/1.4 var(--f-b);
+  padding-block:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--g);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:minmax(340px,430px) minmax(0,1fr);gap:16px;height:100%;min-height:0}
+
+.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.brand{display:flex;align-items:center;gap:14px;padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.brand svg{width:42px;height:auto;flex:none}
+.brand b{display:block;font:700 28px/.95 var(--f-d);letter-spacing:.01em;color:var(--ink)}
+.brand small{display:block;margin-top:5px;font:500 14px var(--f-b);color:var(--muted);letter-spacing:.02em}
+
+#home,#route{display:flex;flex-direction:column;min-height:0;flex:1}
+.lead{padding:18px 22px 6px}
+h1{margin:0;font:700 40px/1 var(--f-d);letter-spacing:-.005em;text-wrap:balance}
+.lead p{margin:6px 0 0;color:var(--muted);font-size:17px}
+
+.list{list-style:none;margin:0;padding:6px 12px 14px;overflow:auto;flex:1;min-height:0}
+.gh{position:sticky;top:0;z-index:1;margin:0;padding:12px 10px 6px;background:var(--panel);font:600 14px var(--f-d);letter-spacing:.16em;text-transform:uppercase;color:var(--g)}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) 46px;align-items:center;gap:14px;width:100%;min-height:72px;padding:8px 10px;border:0;border-radius:12px;background:transparent;text-align:left}
+.row:hover,.row:active{background:var(--g-tint)}
+.ic{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--g-tint)}
+.ic svg{width:24px;height:24px;stroke:var(--g);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.rn{display:block;font:600 24px/1.1 var(--f-d);letter-spacing:.005em}
+.rs{display:block;margin-top:2px;font-size:15px;line-height:1.3;color:var(--muted)}
+.rh{display:grid;place-items:center;width:46px;height:54px;background:var(--g);color:#fff;font:700 22px var(--f-d);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);font-variant-numeric:tabular-nums}
+.rh.w{background:var(--g-dk)}
+
+.rv-top{padding:16px 22px 12px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--line)}
+.back{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;min-height:56px;padding:0 20px;border:2px solid var(--line);border-radius:12px;background:var(--panel-2);font:600 20px var(--f-d);letter-spacing:.02em}
+.back:active{background:var(--g-tint)}
+.dest{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
+.dest h2{margin:0;font:700 34px/1.04 var(--f-d);text-wrap:balance}
+.dest p{margin:5px 0 0;color:var(--muted);font-size:16px}
+.fl{display:grid;justify-items:center;gap:2px}
+.fl .rh{width:60px;height:70px;font-size:30px}
+.fl>span:last-child{font:600 12px var(--f-d);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.via{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--g-tint);font:600 20px var(--f-d);letter-spacing:.01em}
+.via i{display:grid;place-items:center;min-width:34px;height:34px;padding:0 8px;border-radius:999px;background:var(--g);color:#fff;font:700 18px/1 var(--f-d);font-style:normal}
+.steps{list-style:none;margin:0;padding:12px 14px 18px;overflow:auto;flex:1;min-height:0;counter-reset:s}
+.step{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px;padding:12px 8px;align-items:start}
+.step+.step{border-top:1px solid var(--line)}
+.sn{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--g);color:#fff;font:700 20px var(--f-d)}
+.step.last .sn{background:var(--g-dk)}
+.st{font-size:20px;line-height:1.35;padding-top:5px}
+
+.stage{position:relative;background:var(--plan-bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-height:0;min-width:0}
+#map{display:block;width:100%;height:100%;user-select:none;-webkit-user-select:none}
+
+/* plan */
+.hall{fill:#fff;stroke:var(--wall);stroke-width:5}
+.blob{fill:#EEF1EF}
+.street{fill:var(--plan-street)}
+.facade{stroke:var(--wall);stroke-width:7;stroke-linecap:round}
+.tx{font:600 24px var(--f-d);fill:var(--ink);letter-spacing:.06em}
+.tx.s{font-size:17px;font-weight:500;fill:var(--muted);letter-spacing:.1em}
+.tx.w{fill:#fff}
+.obj{fill:#E7ECE9;stroke:var(--wall);stroke-width:3}
+.lift{fill:#fff;stroke:var(--wall);stroke-width:2.5}
+.lift.on{fill:var(--g-lt);stroke:var(--g-dk);stroke-width:4}
+.liftn{font:700 44px var(--f-d);fill:var(--ink)}
+.liftn.on{fill:#fff}
+.room{fill:var(--g-tint);stroke:var(--g);stroke-width:3}
+.kiosk{fill:#fff;stroke:var(--wall);stroke-width:3}
+.kscr{fill:var(--g)}
+.kiosk.me{stroke:var(--g-dk);stroke-width:5}
+.tab{fill:#fff;stroke:var(--wall);stroke-width:2.5}
+.zoom{position:absolute;top:14px;right:14px;min-height:56px;padding:0 22px;border:2px solid var(--line);border-radius:12px;background:#fff;font:600 20px var(--f-d);letter-spacing:.02em;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.zoom:active{background:var(--g-tint)}
+.footprint{fill:url(#hat);stroke:#9AA79F;stroke-width:4}
+.big{font:700 46px var(--f-d);fill:var(--g-dk);letter-spacing:.02em}
+.bigs{font:500 26px var(--f-b);fill:var(--ink)}
+.park{font:700 64px var(--f-d);fill:var(--ink);letter-spacing:.14em}
+/* tablety przy windach: pionowe, ciemne jak oryginały, w barwach aplikacji */
+body.is-tab{padding:0;background:var(--bg)}
+body.is-tab,body.is-tab #tablet{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.is-tab .app{display:none}
+#tablet{display:none;position:fixed;top:calc(var(--u)*14);right:calc(var(--u)*14);bottom:calc(var(--u)*14);left:calc(var(--u)*14);flex-direction:column;overflow:hidden;color:var(--ink);
+  background:#fff;border:1px solid var(--line);border-top:calc(var(--u)*16) solid var(--g);border-radius:calc(var(--u)*20);--u:calc(min(100vw,75vh)/768);
+  padding:calc(var(--u)*24) calc(var(--u)*34) calc(var(--u)*20)}
+.is-tab #tablet{display:flex}
+.tt{display:flex;align-items:center;justify-content:center;font:700 calc(var(--u)*104)/1.05 var(--f-d);letter-spacing:.01em}
+.tt>*+*{margin-left:calc(var(--u)*20)}
+.tt span{color:var(--g)}
+.ar{display:block;width:calc(var(--u)*34);height:calc(var(--u)*50);background:var(--g);-webkit-clip-path:polygon(100% 0,100% 100%,0 50%);clip-path:polygon(100% 0,100% 100%,0 50%)}
+.ar.r{-webkit-clip-path:polygon(0 0,0 100%,100% 50%);clip-path:polygon(0 0,0 100%,100% 50%)}
+.tr{height:2px;background:var(--line);margin:calc(var(--u)*14) 0}
+.ts{margin:0;text-align:center;font:600 calc(var(--u)*27)/1.2 var(--f-d);letter-spacing:.2em;text-transform:uppercase}
+.tp{margin:calc(var(--u)*16) 0 calc(var(--u)*6);text-align:center;font:700 calc(var(--u)*27)/1 var(--f-d);letter-spacing:.14em;text-transform:uppercase;color:var(--g)}
+.tf{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) calc(var(--u)*60) minmax(0,1fr);grid-auto-rows:minmax(0,1fr)}
+.tf.sparse{grid-auto-rows:calc(var(--u)*230);align-content:start;padding-top:calc(var(--u)*20)}
+.tc{display:flex;align-items:center;min-width:0}
+.tc>*+*{margin-left:calc(var(--u)*12)}
+.tc.l{justify-content:flex-end;text-align:right}
+.tc.r{justify-content:flex-start;text-align:left}
+.tc .rh{flex:none;width:calc(var(--u)*50);height:calc(var(--u)*58);font-size:calc(var(--u)*26);-webkit-clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.tn{font:600 calc(var(--u)*25)/1.08 var(--f-d);letter-spacing:.02em;text-transform:uppercase;min-width:0}
+.tn small{display:block;font:500 calc(var(--u)*20)/1.15 var(--f-b);letter-spacing:.01em;text-transform:none;color:var(--muted)}
+.tn>div+div{margin-top:.4em}
+.sparse .tn{font-size:calc(var(--u)*26)}
+.sparse .tn small{font-size:calc(var(--u)*20)}
+.sparse .tc .rh{width:calc(var(--u)*58);height:calc(var(--u)*68);font-size:calc(var(--u)*30)}
+.tx2{position:relative}
+.tx2:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:calc(var(--u)*7);margin-left:calc(var(--u)*-3.5);background:repeating-linear-gradient(180deg,var(--g) 0 calc(var(--u)*7),#CFE3D3 calc(var(--u)*7) calc(var(--u)*14))}
+.tx2 i{position:absolute;left:50%;top:50%;width:calc(var(--u)*26);height:calc(var(--u)*34);margin:calc(var(--u)*-17) 0 0 calc(var(--u)*-13);background:var(--g-dk);-webkit-clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.tnote{margin-top:calc(var(--u)*10);padding:calc(var(--u)*12) calc(var(--u)*16);border-radius:calc(var(--u)*12);background:var(--g-tint);color:var(--g-dk);text-align:center;font:600 calc(var(--u)*23)/1.2 var(--f-d);letter-spacing:.04em}
+.vhot{position:fixed;right:0;bottom:0;width:140px;height:140px;z-index:20;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.brand{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.vmenu{position:fixed;top:0;right:0;bottom:0;left:0;z-index:30;display:none;place-items:center;background:rgba(32,40,35,.45)}
+.vmenu.open{display:grid}
+.vcard{width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:22px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.pdots{display:flex;justify-content:center;margin:6px 0 8px}
+.pdots i+i{margin-left:16px}
+.pdots i{width:20px;height:20px;border-radius:50%;border:2px solid var(--g);background:transparent}
+.pdots i.on{background:var(--g)}
+.pmsg{min-height:24px;text-align:center;font:600 18px var(--f-d);color:#B3261E}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.pad button{min-height:68px;border:2px solid var(--line);border-radius:12px;background:var(--panel-2);font:600 30px var(--f-d)}
+.pad button:active{background:var(--g-tint)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.vcard h3{margin:0 0 4px;font:700 30px/1.05 var(--f-d)}
+.vcard p{margin:0 0 14px;color:var(--muted);font-size:16px}
+.vopt{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;width:100%;min-height:64px;margin-top:8px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;background:var(--panel-2);text-align:left}
+.vopt.on{border-color:var(--g);background:var(--g-tint)}
+.vopt .rh{width:44px;height:50px;font-size:20px}
+.vopt span span{display:block}
+.vopt .vn{font:600 22px/1.1 var(--f-d)}
+.vopt .vs{font-size:15px;color:var(--muted)}
+.vclose{margin-top:14px;width:100%;min-height:56px;border:2px solid var(--line);border-radius:12px;background:#fff;font:600 20px var(--f-d)}
+.hit{cursor:pointer}
+.hit:hover .room,.hit:hover .obj,.hit:hover .recfill{stroke-width:5}
+.hit:focus-visible{outline:none}
+.hit:focus-visible .room,.hit:focus-visible .obj,.hit:focus-visible .recfill{stroke:var(--g-dk);stroke-width:6}
+.sel .room{fill:var(--g-lt);stroke:var(--g-dk);stroke-width:5}
+.sel .recfill{fill:var(--g-tint);stroke:var(--g-dk);stroke-width:5}
+.sel .obj{fill:var(--g-tint);stroke:var(--g-dk);stroke-width:5}
+.dim{opacity:.7}
+.recfill{fill:#fff;stroke:var(--wall);stroke-width:4}
+.door{stroke:var(--g);stroke-width:8;stroke-linecap:round}
+.casing{fill:none;stroke:#fff;stroke-width:20;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.under{fill:none;stroke:var(--g);stroke-opacity:.28;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.route{fill:none;stroke:var(--g);stroke-width:9;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 18;animation:flow .9s linear infinite;pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-19}}
+.pin path{fill:var(--g-dk);stroke:#fff;stroke-width:3}
+.pin circle{fill:#fff}
+.you-dot{fill:var(--ink);stroke:#fff;stroke-width:4}
+.pulse{fill:var(--g-lt);transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{from{transform:scale(1);opacity:.55}to{transform:scale(3.6);opacity:0}}
+.pill{fill:var(--ink)}
+.pill-t{font:700 19px var(--f-d);letter-spacing:.12em;fill:#fff}
+.call{fill:var(--g-dk);stroke:#fff;stroke-width:3}
+.call-t{font:700 30px var(--f-d);letter-spacing:.03em;fill:#fff}
+.call-n{font:700 30px var(--f-d);fill:var(--g-dk)}
+.arrow{fill:var(--g-dk)}
+
+@media (max-width:899px){
+  html,body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr);height:auto}
+  .stage{order:-1;height:min(78vw,520px);min-height:300px}
+  .list{max-height:520px}
+  h1{font-size:34px}
+}
+@media (prefers-reduced-motion:reduce){
+  .route{animation:none}
+  .pulse{animation:none;opacity:.3}
+}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Wybór celu i trasa">
+    <header class="brand">
+      <svg viewBox="0 0 64 96" aria-hidden="true"><path d="M32 0 46 24 32 48 18 24Z" fill="#50B058"/><path d="M12 22 26 46 12 70-2 46Z" transform="translate(2 0)" fill="#087838"/><path d="M52 22 66 46 52 70 38 46Z" transform="translate(-2 0)" fill="#087838"/><path d="M32 46 46 70 32 94 18 70Z" fill="#084820"/></svg>
+      <div><b>NOBEL<br>TOWER</b><small id="kid">Parter · ul. Dąbrowskiego 77A</small></div>
+    </header>
+    <section id="home">
+      <div class="lead"><h1>Dokąd idziesz?</h1><p>Dotknij nazwy, a plan pokaże drogę od tego kiosku.</p></div>
+      <ul class="list" id="list"></ul>
+    </section>
+    <section id="route" hidden></section>
+  </aside>
+  <main class="stage"><svg id="map" viewBox="-260 20 1530 1110" role="img" aria-label="Plan parteru Nobel Tower"></svg><button type="button" id="zoom" class="zoom">Cały parter</button></main>
+</div>
+
+<section id="tablet" aria-live="polite"></section>
+<div class="vhot" id="vhot" aria-hidden="true"></div>
+<div class="vmenu" id="vmenu" role="dialog" aria-modal="true" aria-label="Wybór wariantu ekranu"><div class="vcard"><div id="vpin"><h3>Kod dostępu</h3><p>Wpisz czterocyfrowy kod, aby zmienić wariant ekranu.</p><div class="pdots" id="pdots"></div><div class="pmsg" id="pmsg" aria-live="polite"></div><div class="pad" id="pad"></div></div><div id="vsel" style="display:none"><h3>Wariant ekranu</h3><p>Wybierz, na którym urządzeniu działa ta strona.</p><div id="vlist"></div></div><button type="button" class="vclose" id="vclose">Zamknij</button></div></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= DANE ================= */
+/* Piętra, windy i opisy z tablicy "Mapa placówek medycznych" w holu.
+   Wejścia do Apteki, Solumedu i Scanmedu: od strony parkingu, trzeba wyjść z budynku. */
+const D = [
+  { id:'apteka',    name:'Apteka Vivre',              sub:'Apteka · wejście z zewnątrz, na rogu budynku',            floor:0, type:'out',   door:'vivre',   icon:'cross' },
+  { id:'solumed-p', name:'Solumed',                   sub:'Wizyty prywatne · wejście z zewnątrz',    floor:0, type:'out',   door:'solumed', icon:'pill' },
+  { id:'scanmed',   name:'Scanmed – POZ',             sub:'NFZ oraz wizyty prywatne · wejście z zewnątrz', floor:0, type:'out', door:'scanmed', icon:'steth' },
+  { id:'yuzu',      name:'Restauracja Yuzu',          sub:'Restauracja · winda 1–2',                         floor:1, type:'lift',  lift:'1-2',     icon:'fork' },
+  { id:'diagnoza',  name:'Moja Diagnoza',             sub:'Rezonans, tomografia, USG oraz RTG · winda 3',    floor:2, type:'lift',  lift:'3',       icon:'ring' },
+  { id:'diagnostyka',name:'Diagnostyka',              sub:'Punkt pobrań · winda 3',                          floor:2, type:'lift',  lift:'3',       icon:'tube' },
+  { id:'bamberski', name:'Bamberski Dwór',            sub:'NFZ oraz wizyty prywatne · winda 3',              floor:3, type:'lift',  lift:'3',       icon:'house' },
+  { id:'solumed-cm',name:'Centrum Medyczne Solumed',  sub:'Badania kliniczne · winda 3',                     floor:3, type:'lift',  lift:'3',       icon:'cross' },
+  { id:'bocian',    name:'Klinika Bocian',            sub:'Leczenie niepłodności IN VITRO · winda 1–2',      floor:8, type:'lift',  lift:'1-2',     icon:'cross' },
+  { id:'genesis',   name:'Genesis',                   sub:'Poradnia genetyczna · winda 1–2',                 floor:9, type:'lift',  lift:'1-2',     icon:'dna' },
+  { id:'recepcja',  name:'Recepcja',                  sub:'Informacja i pomoc',                              floor:0, type:'lobby', icon:'desk', group:'W budynku' },
+  { id:'schody',    name:'Schody',                    sub:'Klatka schodowa',                                 floor:0, type:'lobby', icon:'stairs', group:'W budynku' },
+  { id:'wyjscie',   name:'Wyjście główne',            sub:'Wiatrołap i wyjście na parking',                  floor:0, type:'lobby', icon:'exit', group:'W budynku' }
+];
+const BY = new Map(D.map(d => [d.id, d]));
+
+const ICONS = {
+  cross:'<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
+  pill:'<rect x="2.5" y="8.5" width="19" height="7" rx="3.5" transform="rotate(-40 12 12)"/><path d="M9 15l6-6"/>',
+  steth:'<path d="M6 3v6a4 4 0 0 0 8 0V3M10 13v2a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="11" r="2"/>',
+  fork:'<path d="M6 3v7M4 3v5a2 2 0 0 0 4 0V3M6 10v11M17 3c-2 2-3 5-3 8h3v10"/>',
+  ring:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>',
+  tube:'<path d="M9 3h6M10 3v14a2 2 0 0 0 4 0V3M10 10h4"/>',
+  house:'<path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/>',
+  dna:'<path d="M7 3c0 7 10 7 10 18M17 3c0 7-10 7-10 18M9 8h6M9 16h6"/>',
+  desk:'<path d="M3 17h18M5 17v-6h14v6M9 11V8h6v3"/>',
+  stairs:'<path d="M3 20h5v-4h4v-4h4V8h5"/>',
+  exit:'<path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/>'
+};
+const icon = n => `<span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg></span>`;
+
+/* ================= TRASA ================= */
+/* Trzy kioski stoją w holu przed ścianą z windami. Numer kiosku bierze się z adresu: #kiosk-1, #kiosk-2 lub #kiosk-3. */
+const KIOSKS = { 1:{ x:463, y:350 }, 2:{ x:310, y:350 }, 3:{ x:160, y:350 } };
+const kioskId = () => { const m = (location.hash || '').match(/kiosk-([123])/); return m ? +m[1] : 2; };
+let K = KIOSKS[kioskId()];
+const LX = { 3:303, 2:463, 1:623 };                 // windy od lewej: 3, 2, 1
+const DX = { scanmed:-300, solumed:1660, vivre:1981 }; // wejścia placówek na elewacji: Scanmed po lewej stronie budynku, Solumed i Apteka (róg) po prawej, patrząc na wejście
+const S0 = () => [[K.x, K.y + 48], [K.x, 520]];
+const EXIT = () => S0().concat([[700,520],[700,610],[831,610],[831,915]]);
+
+function routePts(d) {
+  if (d.type === 'lift') { const n = d.lift === '3' ? 3 : 2; return S0().concat([[LX[n],520],[LX[n],558]]); }
+  if (d.type === 'out')  return EXIT().concat([[DX[d.door],915],[DX[d.door],880]]);
+  if (d.id === 'recepcja') return [[K.x, K.y + 48],[560, K.y + 48],[560,262]];
+  if (d.id === 'schody')   return S0().concat([[700,520],[700,610],[1040,610]]);
+  return S0().concat([[700,520],[700,610],[831,610],[831,884]]);   // wyjście
+}
+const pinAt = d => { const p = routePts(d); return d.type === 'lift' ? null : p[p.length - 1]; };
+
+function stepsFor(d) {
+  const s = ['Jesteś przy kiosku w holu, obok recepcji.'];
+  if (d.type === 'lift') {
+    if (d.lift === '3') s.push('Idź do wind. Winda 3 jest najdalej od wejścia głównego.');
+    else s.push('Idź do wind. Winda 1 stoi najbliżej wejścia głównego, winda 2 obok niej.');
+    s.push(`Wjedź windą ${d.lift === '3' ? '3' : '1 lub 2'} na ${d.floor === 0 ? 'parter' : 'piętro ' + d.floor}.`);
+    return s;
+  }
+  if (d.type === 'out') {
+    s.push('Idź do wejścia głównego, za rzędem krzeseł.');
+    s.push('Przejdź przez dwie pary drzwi i wyjdź z budynku.');
+    if (d.door === 'scanmed') s.push('Po wyjściu skręć w prawo i idź wzdłuż budynku, mijając wjazd na parking. Scanmed jest w lewej części budynku.');
+    else if (d.door === 'solumed') s.push('Po wyjściu skręć w lewo i idź wzdłuż budynku, mijając wyjście ewakuacyjne. Solumed jest przed Apteką.');
+    else s.push('Po wyjściu skręć w lewo i idź wzdłuż budynku do końca. Apteka Vivre jest na rogu budynku, za Solumedem.');
+    return s;
+  }
+  if (d.id === 'recepcja') { s.push('Idź prosto w głąb holu. Recepcja stoi pośrodku, przed ścianą z zielenią.'); return s; }
+  if (d.id === 'schody')   { s.push('Idź do wejścia głównego, za rzędem krzeseł. Drzwi do schodów są tuż obok wiatrołapu.'); return s; }
+  s.push('Idź do wejścia głównego, za rzędem krzeseł.'); s.push('Przejdź przez dwie pary drzwi i wyjdź z budynku.');
+  return s;
+}
+
+/* ================= WIDOKI BOCZNE ================= */
+const $ = id => document.getElementById(id);
+const svg = $('map'), homeEl = $('home'), routeEl = $('route'), listEl = $('list');
+const state = { id: null };
+const floorLabel = f => f === 0 ? 'Parter' : `Piętro ${f}`;
+
+function renderList() {
+  const floors = [...new Set(D.filter(d => !d.group).map(d => d.floor))].sort((a, b) => a - b);
+  let h = '';
+  const row = d => `<li><button type="button" class="row" data-id="${d.id}">${icon(d.icon)}<span><span class="rn">${d.name}</span><span class="rs">${d.sub}</span></span>` +
+    (d.group ? '<span></span>' : `<span class="rh${d.floor === 0 ? ' w' : ''}" aria-label="${floorLabel(d.floor)}">${d.floor}</span>`) + `</button></li>`;
+  floors.forEach(f => { h += `<li class="gh">${f === 0 ? 'Parter · wejścia z zewnątrz' : floorLabel(f)}</li>` + D.filter(d => !d.group && d.floor === f).map(row).join(''); });
+  h += `<li class="gh">W budynku</li>` + D.filter(d => d.group).map(row).join('');
+  listEl.innerHTML = h;
+}
+function renderRoute() {
+  const d = BY.get(state.id);
+  const steps = stepsFor(d);
+  let h = `<div class="rv-top"><button type="button" class="back" id="back">← Wszystkie miejsca</button>` +
+    `<div class="dest"><div><h2>${d.name}</h2><p>${d.sub.split(' · ')[0]}</p></div>` +
+    (d.group ? '' : `<div class="fl"><span class="rh${d.floor === 0 ? ' w' : ''}">${d.floor}</span><span>${floorLabel(d.floor)}</span></div>`) + `</div>`;
+  if (d.type === 'lift') h += `<div class="via"><i>${d.lift === '3' ? '3' : '1–2'}</i>Jedź windą ${d.lift === '3' ? '3' : '1 lub 2'} na ${floorLabel(d.floor).toLowerCase()}</div>`;
+  if (d.type === 'out')  h += `<div class="via"><i>↗</i>Wejście z zewnątrz, wzdłuż budynku</div>`;
+  h += `</div><ol class="steps">` + steps.map((t, i) => `<li class="step${i === steps.length - 1 ? ' last' : ''}"><span class="sn">${i + 1}</span><span class="st">${t}</span></li>`).join('') + `</ol>`;
+  routeEl.innerHTML = h;
+}
+function renderSide() {
+  const has = !!state.id;
+  homeEl.hidden = has; routeEl.hidden = !has;
+  homeEl.style.display = has ? 'none' : 'flex'; routeEl.style.display = has ? 'flex' : 'none';
+  if (has) renderRoute();
+}
+
+/* ================= PLAN ================= */
+const cls = (id, base) => `${base} hit${state.id === id ? ' sel' : ''}${state.id && state.id !== id ? ' dim' : ''}`;
+function wrap(name, max) {
+  const out = []; let cur = '';
+  name.split(' ').forEach(w => { const t = (cur + ' ' + w).trim(); if (t.length <= max) cur = t; else { if (cur) out.push(cur); cur = w; } });
+  if (cur) out.push(cur); return out;
+}
+function zoneHTML(id, pts, cx, cy, lines, sub, door) {
+  const name = lines.join(' ');
+  return `<g class="${cls(id, '')}" data-id="${id}" tabindex="0" role="button" aria-label="${name}">` +
+    `<polygon class="room" points="${pts}"/>` +
+    lines.map((l, i) => `<text class="big" x="${cx}" y="${cy + i * 50}" text-anchor="middle">${l}</text>`).join('') +
+    `<text class="bigs" x="${cx}" y="${cy + lines.length * 50 + 4}" text-anchor="middle">${sub}</text>` +
+    `<line class="door" x1="${door - 36}" x2="${door + 36}" y1="886" y2="886"/></g>`;
+}
+function roomHTML(id, x, y, w, h, name, door) {
+  const lines = wrap(name, Math.floor(w / 11));
+  const cy = y + 46;
+  return `<g class="${cls(id, '')}" data-id="${id}" tabindex="0" role="button" aria-label="${name}">` +
+    `<rect class="room" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>` +
+    `<text class="tx" text-anchor="middle" x="${x + w / 2}" y="${cy - 8}" style="font-size:20px">` + lines.map((l, i) => `<tspan x="${x + w / 2}" dy="${i ? 24 : 0}">${l}</tspan>`).join('') + `</text>` +
+    `<line class="door" x1="${door - 24}" x2="${door + 24}" y1="${y + h}" y2="${y + h}"/></g>`;
+}
+function pinHTML(p) {
+  return `<g class="pin" transform="translate(${p[0]} ${p[1]})" pointer-events="none"><path d="M0 0C-7-12-18-20-18-34a18 18 0 1 1 36 0C18-20 7-12 0 0Z"/><circle cy="-34" r="7"/></g>`;
+}
+function renderMap() {
+  const sel = state.id ? BY.get(state.id) : null;
+  const liftOn = n => sel && sel.type === 'lift' && (sel.lift === '3' ? n === 3 : n !== 3);
+  let h = '';
+  h += `<defs><pattern id="hat" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="26" height="26" fill="#EEF1EF"/><line x1="0" y1="0" x2="0" y2="26" stroke="#D3DBD6" stroke-width="3"/></pattern></defs>`;
+  h += `<rect class="street" x="-3000" y="888" width="7000" height="600"/>`;
+  h += `<text class="tx s" x="1300" y="1010">ULICA</text>`;
+  h += `<text class="park" x="-35" y="1000" text-anchor="middle">PARKING</text>`;
+  h += `<rect class="footprint" x="-419" y="60" width="2500" height="826" rx="8"/>`;
+  h += zoneHTML('scanmed', '-419,60 227,60 227,886 -419,886', -110, 320, ['Scanmed'], 'POZ', DX.scanmed);
+  h += zoneHTML('solumed-p', '1172,60 1691,60 1691,701 1875,701 1875,886 1172,886', 1431, 320, ['Solumed'], 'Wizyty prywatne', DX.solumed);
+  h += zoneHTML('apteka', '1691,60 2081,60 2081,886 1875,886 1875,701 1691,701', 1886, 320, ['Apteka', 'Vivre'], 'Róg budynku', DX.vivre);
+  h += `<rect x="900" y="666" width="272" height="220" fill="#fff" stroke="#404040" stroke-width="3"/><text class="tx s" x="1036" y="770" text-anchor="middle" style="font-size:20px">WYJŚCIE</text><text class="tx s" x="1036" y="798" text-anchor="middle" style="font-size:20px">EWAKUACYJNE</text>`;
+  h += `<rect class="hall" x="52" y="60" width="860" height="606" rx="6"/>`;
+  h += `<path class="blob" d="M60 380C180 340 260 440 420 430S640 360 760 420 900 470 905 560L905 660 60 660Z"/>`;
+  h += `<rect x="52" y="60" width="860" height="16" fill="#087838" opacity=".75"/>`;
+  h += `<text class="tx s" x="482" y="102" text-anchor="middle">ŚCIANA Z ZIELENIĄ</text>`;
+  // wiatrołap, schody, drzwi ewakuacyjne
+  h += `<rect x="764" y="680" width="135" height="206" fill="#F4F7F5" stroke="#404040" stroke-width="4"/>`;
+  h += `<line class="door" x1="764" x2="899" y1="666" y2="666" stroke-dasharray="18 8"/><line class="door" x1="764" x2="899" y1="886" y2="886" stroke-dasharray="18 8"/>`;
+  h += `<text class="tx s" transform="translate(787 800) rotate(-90)" text-anchor="middle">WIATROŁAP</text>`;
+  h += `<rect x="912" y="598" width="45" height="44" fill="#fff" stroke="#404040" stroke-width="3"/><line class="door" x1="912" x2="912" y1="604" y2="636"/>`;
+  h += `<g class="${cls('schody', '')}" data-id="schody" tabindex="0" role="button" aria-label="Schody"><rect class="obj" x="957" y="328" width="215" height="334" rx="4"/>`;
+  for (let i = 0; i < 12; i++) h += `<line x1="973" x2="1156" y1="${350 + i * 24}" y2="${350 + i * 24}" stroke="#404040" stroke-opacity=".4" stroke-width="2"/>`;
+  h += `<text class="tx" x="1064" y="490" text-anchor="middle" stroke="#E7ECE9" stroke-width="8" paint-order="stroke" style="font-size:26px">SCHODY</text></g>`;
+  // recepcja, totem, krzesła
+  h += `<g class="${cls('recepcja', '')}" data-id="recepcja" tabindex="0" role="button" aria-label="Recepcja"><rect class="recfill" x="157" y="160" width="572" height="78" rx="24"/><text class="tx" x="443" y="208" text-anchor="middle" style="font-size:26px;letter-spacing:.2em">RECEPCJA</text></g>`;
+  h += `<rect x="794" y="148" width="88" height="44" rx="4" fill="#50B058" stroke="#087838" stroke-width="3"/><text class="tx w" x="838" y="176" text-anchor="middle" style="font-size:16px">TOTEM</text>`;
+  h += `<rect class="obj" x="812" y="313" width="60" height="254" rx="8"/>`;
+  for (let i = 0; i < 5; i++) h += `<rect x="824" y="${327 + i * 48}" width="36" height="34" rx="6" fill="#fff" stroke="#404040" stroke-width="2"/>`;
+  h += `<text class="tx s" x="842" y="298" text-anchor="middle">KRZESŁA</text>`;
+  // windy
+  h += `<rect class="obj" x="258" y="575" width="410" height="79"/>`;
+  [3, 2, 1].forEach(n => {
+    const x = LX[n] - 45, on = liftOn(n);
+    h += `<rect class="lift${on ? ' on' : ''}" x="${x}" y="588" width="90" height="66"/><text class="liftn${on ? ' on' : ''}" x="${LX[n]}" y="636" text-anchor="middle">${n}</text>`;
+  });
+  // dwa tablety przy windach
+  [[543, 'TABLET 1'], [211, 'TABLET 2']].forEach(([tx, nm]) => { h += `<rect class="tab" x="${tx - 14}" y="548" width="28" height="22" rx="3"/><text class="tx s" x="${tx}" y="540" text-anchor="middle" style="font-size:13px">${nm}</text>`; });
+  // parkomat i kiosk
+  h += `<rect class="obj" x="80" y="560" width="84" height="86" rx="6"/><text class="tx s" x="122" y="608" text-anchor="middle" style="font-size:12px;letter-spacing:.02em">PARKOMAT</text>`;
+  [1, 2, 3].forEach(n => {
+    const q = KIOSKS[n], me = q === K;
+    h += `<g pointer-events="none"><rect class="kiosk${me ? ' me' : ''}" x="${q.x - 15}" y="${q.y - 30}" width="30" height="60" rx="6"/><rect class="kscr" x="${q.x + 3}" y="${q.y - 22}" width="7" height="44" rx="2"/>` +
+      `<text class="tx" x="${q.x - 3}" y="${q.y + 7}" text-anchor="middle" style="font-size:17px;letter-spacing:0">${n}</text></g>`;
+  });
+
+  // trasa
+  if (sel) {
+    const p = routePts(sel), pts = p.map(q => q.join(',')).join(' ');
+    h += `<polyline class="casing" points="${pts}"/><polyline class="under" points="${pts}"/><polyline class="route" points="${pts}"/>`;
+    const pin = pinAt(sel);
+    if (pin) h += pinHTML(pin);
+    if (sel.type === 'lift') {
+      const l1 = sel.lift === '3' ? 'WINDA 3' : 'WINDA 1–2', l2 = floorLabel(sel.floor).toUpperCase();
+      h += `<g pointer-events="none"><rect class="call" x="680" y="584" width="124" height="70" rx="12"/><text class="call-t" x="742" y="613" text-anchor="middle" style="font-size:20px">${l1}</text><text class="call-t" x="742" y="640" text-anchor="middle" style="font-size:20px">${l2}</text></g>`;
+    }
+  }
+  // JESTEŚ TUTAJ
+  h += `<g pointer-events="none"><circle class="pulse" cx="${K.x}" cy="${K.y + 48}" r="11"/><circle class="you-dot" cx="${K.x}" cy="${K.y + 48}" r="12"/>` +
+    `<rect class="pill" x="${K.x - 100}" y="${K.y - 78}" width="200" height="34" rx="17"/><text class="pill-t" x="${K.x}" y="${K.y - 55}" text-anchor="middle">JESTEŚ TUTAJ</text></g>`;
+  svg.innerHTML = h;
+}
+
+/* ================= TABLETY ================= */
+/* #tablet-1 stoi między windami 1 i 2, #tablet-2 między windami 2 i 3. Treść jak na tablicach przy windach. */
+const TAB = {
+  1:{ nums:['1','2'], arrows:'lr', sub:'Tymi windami dojedziesz do:', other:'Piętra 2 i 3: winda 3',
+    floors:[
+      { f:13, side:'r', t:[['I.O.Z.S.S.']] },
+      { f:12, side:'l', t:[['Alten Polska']] },
+      { f:11, side:'r', t:[['Diagnostyka']] },
+      { f:10, side:'l', t:[['Diagnostyka']] },
+      { f:9,  side:'r', t:[['Diagnostyka Genesis']] },
+      { f:8,  side:'l', t:[['Klinika Bocian']] },
+      { f:7,  side:'r', t:[['EPTA Advisors'], ['SpiceSolutions']] },
+      { f:6,  side:'l', t:[['Asseco'], ['Diagnostyka Genesis']] },
+      { f:5,  side:'r', t:[['Enverde']] },
+      { f:4,  side:'l', t:[['Diagnostyka']] },
+      { f:1,  side:'r', t:[['Restauracja']] }
+    ] },
+  2:{ nums:['3'], arrows:'l', sub:'Tą windą dojedziesz do:', other:'Piętro 1 i piętra 4–13: windy 1 i 2', sparse:true,
+    floors:[
+      { f:3, side:'l', t:[['Solumed'], ['Przychodnia Bamberski Dwór']] },
+      { f:2, side:'r', t:[['Moja Diagnoza', 'Rezonans · RTG · USG'], ['Punkt pobrań Diagnostyka']] }
+    ] }
+};
+const tabletId = () => { const m = (location.hash || '').match(/tablet-([12])/); return m ? +m[1] : 0; };
+function renderTablet(n) {
+  const T = TAB[n];
+  const cell = (fl, side) => {
+    if (fl.side !== side) return `<div class="tc ${side}"></div>`;
+    const badge = `<span class="rh" aria-hidden="true">${fl.f}</span>`;
+    const names = `<div class="tn" aria-label="piętro ${fl.f}">` + fl.t.map(([a, b]) => `<div>${a}${b ? `<small>${b}</small>` : ''}</div>`).join('') + `</div>`;
+    return `<div class="tc ${side}">${side === 'l' ? names + badge : badge + names}</div>`;
+  };
+  let h = `<div class="tt">${T.arrows.includes('l') ? '<i class="ar l"></i>' : ''}<span>${T.nums[0]}</span><b>WINDA</b>${T.nums[1] ? `<span>${T.nums[1]}</span>` : ''}${T.arrows.includes('r') ? '<i class="ar r"></i>' : ''}</div>`;
+  h += `<div class="tr"></div><p class="ts">${T.sub}</p><div class="tr"></div><p class="tp">Piętro:</p><div class="tf${T.sparse ? ' sparse' : ''}">`;
+  T.floors.forEach(fl => { h += cell(fl, 'l') + `<div class="tx2"><i></i></div>` + cell(fl, 'r'); });
+  h += `</div><div class="tnote">${T.other}</div>`;
+  $('tablet').innerHTML = h;
+}
+
+/* ================= WYBÓR WARIANTU ================= */
+/* Wariant wynika z adresu (#kiosk-1…3, #tablet-1…2). Tu jest zwykły przełącznik, docelowo ukryty pod PIN-em. */
+const VARS = [
+  ['kiosk-1', 'Kiosk 1', 'Duży ekran przy recepcji, trasy od kiosku 1', 'K'],
+  ['kiosk-2', 'Kiosk 2', 'Duży ekran przy recepcji, trasy od kiosku 2', 'K'],
+  ['kiosk-3', 'Kiosk 3', 'Duży ekran przy recepcji, trasy od kiosku 3', 'K'],
+  ['tablet-1', 'Tablet 1', 'Między windami 1 i 2, lista pięter windy 1–2', 'T'],
+  ['tablet-2', 'Tablet 2', 'Między windą 3 a parkomatem, lista pięter windy 3', 'T']
+];
+const curVar = () => tabletId() ? 'tablet-' + tabletId() : 'kiosk-' + kioskId();
+function drawVars() {
+  const c = curVar();
+  $('vlist').innerHTML = VARS.map(v => `<button type="button" class="vopt${v[0] === c ? ' on' : ''}" data-v="${v[0]}"><span class="rh${v[3] === 'T' ? ' w' : ''}">${v[3]}</span><span><span class="vn">${v[1]}</span><span class="vs">${v[2]}</span></span></button>`).join('');
+}
+/* ukryte otwarcie: przytrzymaj 3 sekundy prawy dolny róg ekranu albo logo Nobel Tower */
+let holdT = 0;
+const PIN = '1001';
+let pin = '';
+const drawPin = () => { $('pdots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join(''); };
+const showPin = () => { pin = ''; $('pmsg').textContent = ''; $('vpin').style.display = ''; $('vsel').style.display = 'none'; drawPin(); };
+const openVars = () => { showPin(); $('vmenu').classList.add('open'); };
+$('pad').innerHTML = ['1','2','3','4','5','6','7','8','9','C','0','⌫'].map(k => `<button type="button" data-k="${k}" aria-label="${k === 'C' ? 'wyczyść' : k === '⌫' ? 'usuń' : k}">${k}</button>`).join('');
+$('pad').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]'); if (!b) return;
+  const k = b.dataset.k;
+  if (k === 'C') pin = ''; else if (k === '⌫') pin = pin.slice(0, -1); else if (pin.length < 4) pin += k;
+  $('pmsg').textContent = ''; drawPin();
+  if (pin.length === 4) {
+    if (pin === PIN) { drawVars(); $('vpin').style.display = 'none'; $('vsel').style.display = ''; }
+    else { $('pmsg').textContent = 'Błędny kod'; const d = $('pdots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); pin = ''; setTimeout(drawPin, 350); }
+  }
+});
+const holdOn = () => { clearTimeout(holdT); holdT = setTimeout(openVars, 3000); };
+const holdOff = () => clearTimeout(holdT);
+[$('vhot'), document.querySelector('.brand')].forEach(el => {
+  ['pointerdown', 'touchstart', 'mousedown'].forEach(ev => el.addEventListener(ev, holdOn));
+  ['pointerup', 'pointerleave', 'pointercancel', 'touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => el.addEventListener(ev, holdOff));
+  el.addEventListener('contextmenu', e => e.preventDefault());
+});
+$('vclose').addEventListener('click', () => $('vmenu').classList.remove('open'));
+$('vmenu').addEventListener('click', e => {
+  if (e.target === $('vmenu')) $('vmenu').classList.remove('open');
+  const b = e.target.closest('[data-v]');
+  if (b) { location.hash = b.dataset.v; $('vmenu').classList.remove('open'); }
+});
+
+/* na tabletach przy windach ekran jest tylko do czytania: bez przewijania, powiększania i zaznaczania (poza ukrytym rogiem z kodem) */
+document.addEventListener('touchmove', e => { if (document.body.classList.contains('is-tab') && !$('vmenu').classList.contains('open')) e.preventDefault(); }, { passive: false });
+['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => { if (document.body.classList.contains('is-tab')) e.preventDefault(); }));
+
+/* ================= KAMERA ================= */
+const VIEWS = { hall:[-260,20,1530,1110], west:[-450,-20,1500,1090], east:[650,-20,1500,1090], all:[-470,-30,2600,1150] };
+let cur = VIEWS.hall.slice(), raf = 0, overview = false;
+const wantView = () => {
+  if (overview) return VIEWS.all;
+  const d = state.id ? BY.get(state.id) : null;
+  if (d && d.type === 'out') return d.door === 'scanmed' ? VIEWS.west : VIEWS.east;
+  return VIEWS.hall;
+};
+function goView(instant) {
+  const to = wantView(), from = cur.slice(), t0 = performance.now(), T = 700;
+  cancelAnimationFrame(raf);
+  $('zoom').textContent = overview ? 'Przybliż' : 'Cały parter';
+  if (instant || matchMedia('(prefers-reduced-motion:reduce)').matches) { cur = to.slice(); svg.setAttribute('viewBox', cur.join(' ')); return; }
+  const step = now => {
+    const k = Math.min(1, (now - t0) / T), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    cur = from.map((v, i) => v + (to[i] - v) * e); svg.setAttribute('viewBox', cur.join(' '));
+    if (k < 1) raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+}
+$('zoom').addEventListener('click', () => { overview = !overview; goView(); });
+
+/* ================= AKCJE ================= */
+function select(id) { state.id = id; overview = false; renderSide(); renderMap(); goView(); }
+function clear() { state.id = null; overview = false; renderSide(); renderMap(); goView(); listEl.scrollTop = 0; }
+
+listEl.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) select(b.dataset.id); });
+routeEl.addEventListener('click', e => { if (e.target.closest('#back')) clear(); });
+svg.addEventListener('click', e => { const g = e.target.closest('[data-id]'); if (g) select(g.dataset.id); });
+svg.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const g = e.target.closest('[data-id]'); if (g) { e.preventDefault(); select(g.dataset.id); }
+});
+
+/* powrót do ekranu startowego po 90 s bezczynności */
+let idle = 0;
+const bump = () => { clearTimeout(idle); idle = setTimeout(() => { if (state.id) clear(); }, 90000); };
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, bump, true));
+bump();
+
+const setKiosk = () => { drawVars(); const tb = tabletId(); document.body.classList.toggle('is-tab', !!tb); if (tb) { renderTablet(tb); return; } K = KIOSKS[kioskId()]; $('kid').textContent = `Parter · kiosk ${kioskId()}`; renderSide(); renderMap(); goView(true); };
+window.addEventListener('hashchange', setKiosk);
+/* wariant wybrany przez PIN zostaje na urządzeniu, także po ponownym uruchomieniu aplikacji z ekranu głównego */
+let firstRun = false;
+try {
+  if (!/(kiosk|tablet)-\d/.test(location.hash)) { const v = localStorage.getItem('nt-variant'); if (v) location.hash = v; else firstRun = true; }
+} catch (e) { firstRun = !/(kiosk|tablet)-\d/.test(location.hash); }
+window.addEventListener('hashchange', () => { try { if (/(kiosk|tablet)-\d/.test(location.hash)) localStorage.setItem('nt-variant', location.hash.slice(1)); } catch (e) {} });
+try { if (/(kiosk|tablet)-\d/.test(location.hash)) localStorage.setItem('nt-variant', location.hash.slice(1)); } catch (e) {}
+setKiosk(); renderList();
+/* pierwsze uruchomienie na urządzeniu: od razu wybór wariantu, bez kodu */
+if (firstRun) { drawVars(); $('vpin').style.display = 'none'; $('vsel').style.display = ''; $('vmenu').classList.add('open'); }
+})();
+</script>
+
+</body>
+</html>
