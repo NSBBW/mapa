@@ -69,7 +69,7 @@ h1{margin:0;font:700 40px/1 var(--f-d);letter-spacing:-.005em;text-wrap:balance}
 .fl .rh{width:60px;height:70px;font-size:30px}
 .fl>span:last-child{font:600 12px var(--f-d);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .via{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--g-tint);font:600 20px var(--f-d);letter-spacing:.01em}
-.via i{display:grid;place-items:center;min-width:34px;height:34px;padding:0 8px;border-radius:999px;background:var(--g);color:#fff;font:700 18px/1 var(--f-d);font-style:normal}
+.via i{display:grid;place-items:center;min-width:34px;white-space:nowrap;height:34px;padding:0 8px;border-radius:999px;background:var(--g);color:#fff;font:700 18px/1 var(--f-d);font-style:normal}
 .steps{list-style:none;margin:0;padding:12px 14px 18px;overflow:auto;flex:1;min-height:0;counter-reset:s}
 .step{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px;padding:12px 8px;align-items:start}
 .step+.step{border-top:1px solid var(--line)}
@@ -168,6 +168,8 @@ body.is-tab,body.is-tab #tablet{touch-action:none;-webkit-user-select:none;user-
 .hit:focus-visible .room,.hit:focus-visible .obj,.hit:focus-visible .recfill{stroke:var(--g-dk);stroke-width:6}
 .sel .room{fill:var(--g-lt);stroke:var(--g-dk);stroke-width:5}
 .sel .recfill{fill:var(--g-tint);stroke:var(--g-dk);stroke-width:5}
+.sel .recfill-i{stroke:var(--g-tint)}
+.sel .recfill-o{stroke:var(--g-dk)}
 .sel .obj{fill:var(--g-tint);stroke:var(--g-dk);stroke-width:5}
 .dim{opacity:.7}
 .recfill{fill:#fff;stroke:var(--wall);stroke-width:4}
@@ -201,8 +203,6 @@ body.is-tab,body.is-tab #tablet{touch-action:none;-webkit-user-select:none;user-
 }
 </style>
 
-</head>
-<body>
 <div class="app">
   <aside class="side" aria-label="Wybór celu i trasa">
     <header class="brand">
@@ -215,7 +215,7 @@ body.is-tab,body.is-tab #tablet{touch-action:none;-webkit-user-select:none;user-
     </section>
     <section id="route" hidden></section>
   </aside>
-  <main class="stage"><svg id="map" viewBox="-260 20 1530 1110" role="img" aria-label="Plan parteru Nobel Tower"></svg><button type="button" id="zoom" class="zoom">Cały parter</button></main>
+  <main class="stage"><svg id="map" viewBox="-120 -20 1700 1260" role="img" aria-label="Plan parteru Nobel Tower"></svg><button type="button" id="zoom" class="zoom">Cały parter</button></main>
 </div>
 
 <section id="tablet" aria-live="polite"></section>
@@ -240,7 +240,8 @@ const D = [
   { id:'solumed-cm',name:'Centrum Medyczne Solumed',  sub:'Badania kliniczne · winda 3',                     floor:3, type:'lift',  lift:'3',       icon:'cross' },
   { id:'bocian',    name:'Klinika Bocian',            sub:'Leczenie niepłodności IN VITRO · winda 1–2',      floor:8, type:'lift',  lift:'1-2',     icon:'cross' },
   { id:'genesis',   name:'Genesis',                   sub:'Poradnia genetyczna · winda 1–2',                 floor:9, type:'lift',  lift:'1-2',     icon:'dna' },
-  { id:'recepcja',  name:'Recepcja',                  sub:'Informacja i pomoc',                              floor:0, type:'lobby', icon:'desk', group:'W budynku' },
+  { id:'iozss',     name:'I.O.Z.S.S.',                sub:'Najwyższe piętro · winda 1–2',                           floor:13, type:'lift', lift:'1-2',     icon:'house' },
+  { id:'recepcja',  name:'Recepcja',                 sub:'Informacja i pomoc',                              floor:0, type:'lobby', icon:'desk', group:'W budynku' },
   { id:'schody',    name:'Schody',                    sub:'Klatka schodowa',                                 floor:0, type:'lobby', icon:'stairs', group:'W budynku' },
   { id:'wyjscie',   name:'Wyjście główne',            sub:'Wiatrołap i wyjście na parking',                  floor:0, type:'lobby', icon:'exit', group:'W budynku' }
 ];
@@ -262,21 +263,28 @@ const ICONS = {
 const icon = n => `<span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg></span>`;
 
 /* ================= TRASA ================= */
-/* Trzy kioski stoją w holu przed ścianą z windami. Numer kiosku bierze się z adresu: #kiosk-1, #kiosk-2 lub #kiosk-3. */
-const KIOSKS = { 1:{ x:463, y:350 }, 2:{ x:310, y:350 }, 3:{ x:160, y:350 } };
+/* Geometria z inwentaryzacji parteru (rzut 1:150). Zapis w pikselach rzutu (110 dpi), przeliczany na jednostki planu:
+   1 piksel rzutu = 2,75 jednostki planu = 34,6 mm w rzeczywistości. */
+const gx = px => Math.round((px - 558) * 2.75 + 52), gy = py => Math.round((py - 461) * 2.75 + 60);
+const gp = pts => pts.map(q => gx(q[0]) + ',' + gy(q[1])).join(' ');
+const FY = 1069;                                     // linia elewacji południowej (wejścia z ulicy)
+/* Trzy kioski stoją w holu przed recepcją. Numer kiosku bierze się z adresu: #kiosk-1, #kiosk-2 lub #kiosk-3. */
+const KIOSKS = { 1:{ x:443, y:470 }, 2:{ x:291, y:470 }, 3:{ x:140, y:470 } };
 const kioskId = () => { const m = (location.hash || '').match(/kiosk-([123])/); return m ? +m[1] : 2; };
 let K = KIOSKS[kioskId()];
-const LX = { 3:303, 2:463, 1:623 };                 // windy od lewej: 3, 2, 1
-const DX = { scanmed:-300, solumed:1660, vivre:1981 }; // wejścia placówek na elewacji: Scanmed po lewej stronie budynku, Solumed i Apteka (róg) po prawej, patrząc na wejście
-const S0 = () => [[K.x, K.y + 48], [K.x, 520]];
-const EXIT = () => S0().concat([[700,520],[700,610],[831,610],[831,915]]);
+const LX = { 3:265, 2:439, 1:617 };                  // windy od lewej: 3, 2, 1
+const DX = { scanmed:gx(292), solumed:gx(1218), vivre:gx(1575) };   // wejścia placówek na elewacji
+const DM = { scanmed:19, solumed:13, vivre:26 };      // odległość od wejścia głównego, w metrach (z rzutu)
+const WX = gx(832);                                  // oś wejścia głównego
+const S0 = () => [[K.x, K.y + 48], [K.x, 722]];
+const EXIT = () => S0().concat([[WX,722],[WX,FY+48]]);
 
 function routePts(d) {
-  if (d.type === 'lift') { const n = d.lift === '3' ? 3 : 2; return S0().concat([[LX[n],520],[LX[n],558]]); }
-  if (d.type === 'out')  return EXIT().concat([[DX[d.door],915],[DX[d.door],880]]);
-  if (d.id === 'recepcja') return [[K.x, K.y + 48],[560, K.y + 48],[560,262]];
-  if (d.id === 'schody')   return S0().concat([[700,520],[700,610],[1040,610]]);
-  return S0().concat([[700,520],[700,610],[831,610],[831,884]]);   // wyjście
+  if (d.type === 'lift') { const n = d.lift === '3' ? 3 : 2; return S0().concat([[LX[n],722],[LX[n],792]]); }
+  if (d.type === 'out')  return EXIT().concat([[DX[d.door],FY+48],[DX[d.door],FY-14]]);
+  if (d.id === 'recepcja') return [[K.x, K.y + 48],[566, K.y + 48],[566, 338]];
+  if (d.id === 'schody')   return S0().concat([[WX,722],[900,722],[900,706],[1020,706],[1020,900]]);
+  return S0().concat([[WX,722],[WX,FY-20]]);   // wyjście
 }
 const pinAt = d => { const p = routePts(d); return d.type === 'lift' ? null : p[p.length - 1]; };
 
@@ -291,9 +299,9 @@ function stepsFor(d) {
   if (d.type === 'out') {
     s.push('Idź do wejścia głównego, za rzędem krzeseł.');
     s.push('Przejdź przez dwie pary drzwi i wyjdź z budynku.');
-    if (d.door === 'scanmed') s.push('Po wyjściu skręć w prawo i idź wzdłuż budynku, mijając wjazd na parking. Scanmed jest w lewej części budynku.');
-    else if (d.door === 'solumed') s.push('Po wyjściu skręć w lewo i idź wzdłuż budynku, mijając wyjście ewakuacyjne. Solumed jest przed Apteką.');
-    else s.push('Po wyjściu skręć w lewo i idź wzdłuż budynku do końca. Apteka Vivre jest na rogu budynku, za Solumedem.');
+    if (d.door === 'scanmed') s.push(`Po wyjściu skręć w prawo i idź wzdłuż budynku, około ${DM.scanmed} m. Scanmed zajmuje lewą część budynku.`);
+    else if (d.door === 'solumed') s.push(`Po wyjściu skręć w lewo i idź wzdłuż budynku, około ${DM.solumed} m, mijając wyjście ewakuacyjne. Solumed jest przed Apteką.`);
+    else s.push(`Po wyjściu skręć w lewo i idź wzdłuż budynku, około ${DM.vivre} m, aż do rogu. Apteka Vivre jest za Solumedem.`);
     return s;
   }
   if (d.id === 'recepcja') { s.push('Idź prosto w głąb holu. Recepcja stoi pośrodku, przed ścianą z zielenią.'); return s; }
@@ -348,7 +356,7 @@ function zoneHTML(id, pts, cx, cy, lines, sub, door) {
     `<polygon class="room" points="${pts}"/>` +
     lines.map((l, i) => `<text class="big" x="${cx}" y="${cy + i * 50}" text-anchor="middle">${l}</text>`).join('') +
     `<text class="bigs" x="${cx}" y="${cy + lines.length * 50 + 4}" text-anchor="middle">${sub}</text>` +
-    `<line class="door" x1="${door - 36}" x2="${door + 36}" y1="886" y2="886"/></g>`;
+    `<line class="door" x1="${door - 60}" x2="${door + 60}" y1="${FY}" y2="${FY}"/></g>`;
 }
 function roomHTML(id, x, y, w, h, name, door) {
   const lines = wrap(name, Math.floor(w / 11));
@@ -364,50 +372,56 @@ function pinHTML(p) {
 function renderMap() {
   const sel = state.id ? BY.get(state.id) : null;
   const liftOn = n => sel && sel.type === 'lift' && (sel.lift === '3' ? n === 3 : n !== 3);
+  const bx = gx(150), by = gy(448), bw = gx(1650) - gx(150), bh = gy(828) - gy(448);
   let h = '';
-  h += `<defs><pattern id="hat" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="26" height="26" fill="#EEF1EF"/><line x1="0" y1="0" x2="0" y2="26" stroke="#D3DBD6" stroke-width="3"/></pattern></defs>`;
-  h += `<rect class="street" x="-3000" y="888" width="7000" height="600"/>`;
-  h += `<text class="tx s" x="1300" y="1010">ULICA</text>`;
-  h += `<text class="park" x="-35" y="1000" text-anchor="middle">PARKING</text>`;
-  h += `<rect class="footprint" x="-419" y="60" width="2500" height="826" rx="8"/>`;
-  h += zoneHTML('scanmed', '-419,60 227,60 227,886 -419,886', -110, 320, ['Scanmed'], 'POZ', DX.scanmed);
-  h += zoneHTML('solumed-p', '1172,60 1691,60 1691,701 1875,701 1875,886 1172,886', 1431, 320, ['Solumed'], 'Wizyty prywatne', DX.solumed);
-  h += zoneHTML('apteka', '1691,60 2081,60 2081,886 1875,886 1875,701 1691,701', 1886, 320, ['Apteka', 'Vivre'], 'Róg budynku', DX.vivre);
-  h += `<rect x="900" y="666" width="272" height="220" fill="#fff" stroke="#404040" stroke-width="3"/><text class="tx s" x="1036" y="770" text-anchor="middle" style="font-size:20px">WYJŚCIE</text><text class="tx s" x="1036" y="798" text-anchor="middle" style="font-size:20px">EWAKUACYJNE</text>`;
-  h += `<rect class="hall" x="52" y="60" width="860" height="606" rx="6"/>`;
-  h += `<path class="blob" d="M60 380C180 340 260 440 420 430S640 360 760 420 900 470 905 560L905 660 60 660Z"/>`;
-  h += `<rect x="52" y="60" width="860" height="16" fill="#087838" opacity=".75"/>`;
-  h += `<text class="tx s" x="482" y="102" text-anchor="middle">ŚCIANA Z ZIELENIĄ</text>`;
-  // wiatrołap, schody, drzwi ewakuacyjne
-  h += `<rect x="764" y="680" width="135" height="206" fill="#F4F7F5" stroke="#404040" stroke-width="4"/>`;
-  h += `<line class="door" x1="764" x2="899" y1="666" y2="666" stroke-dasharray="18 8"/><line class="door" x1="764" x2="899" y1="886" y2="886" stroke-dasharray="18 8"/>`;
-  h += `<text class="tx s" transform="translate(787 800) rotate(-90)" text-anchor="middle">WIATROŁAP</text>`;
-  h += `<rect x="912" y="598" width="45" height="44" fill="#fff" stroke="#404040" stroke-width="3"/><line class="door" x1="912" x2="912" y1="604" y2="636"/>`;
-  h += `<g class="${cls('schody', '')}" data-id="schody" tabindex="0" role="button" aria-label="Schody"><rect class="obj" x="957" y="328" width="215" height="334" rx="4"/>`;
-  for (let i = 0; i < 12; i++) h += `<line x1="973" x2="1156" y1="${350 + i * 24}" y2="${350 + i * 24}" stroke="#404040" stroke-opacity=".4" stroke-width="2"/>`;
-  h += `<text class="tx" x="1064" y="490" text-anchor="middle" stroke="#E7ECE9" stroke-width="8" paint-order="stroke" style="font-size:26px">SCHODY</text></g>`;
-  // recepcja, totem, krzesła
-  h += `<g class="${cls('recepcja', '')}" data-id="recepcja" tabindex="0" role="button" aria-label="Recepcja"><rect class="recfill" x="157" y="160" width="572" height="78" rx="24"/><text class="tx" x="443" y="208" text-anchor="middle" style="font-size:26px;letter-spacing:.2em">RECEPCJA</text></g>`;
-  h += `<rect x="794" y="148" width="88" height="44" rx="4" fill="#50B058" stroke="#087838" stroke-width="3"/><text class="tx w" x="838" y="176" text-anchor="middle" style="font-size:16px">TOTEM</text>`;
-  h += `<rect class="obj" x="812" y="313" width="60" height="254" rx="8"/>`;
-  for (let i = 0; i < 5; i++) h += `<rect x="824" y="${327 + i * 48}" width="36" height="34" rx="6" fill="#fff" stroke="#404040" stroke-width="2"/>`;
-  h += `<text class="tx s" x="842" y="298" text-anchor="middle">KRZESŁA</text>`;
-  // windy
-  h += `<rect class="obj" x="258" y="575" width="410" height="79"/>`;
+  h += `<defs><pattern id="hat" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="26" height="26" fill="#EEF1EF"/><line x1="0" y1="0" x2="0" y2="26" stroke="#D3DBD6" stroke-width="3"/></pattern><clipPath id="bclip"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="120"/></clipPath></defs>`;
+  h += `<rect class="street" x="-3000" y="${FY + 3}" width="9000" height="800"/>`;
+  h += `<text class="tx s" x="${gx(1000)}" y="${FY + 150}">ULICA</text>`;
+  h += `<text class="park" x="120" y="${FY + 125}" text-anchor="middle">PARKING</text>`;
+  // obrys budynku i trzy placówki zajmujące parter wokół holu
+  h += `<rect class="footprint" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="120"/>`;
+  h += `<g clip-path="url(#bclip)">`;
+  h += zoneHTML('scanmed', gp([[150,448],[557,448],[557,668],[428,668],[428,828],[150,828]]), gx(340), 330, ['Scanmed'], 'POZ', DX.scanmed);
+  h += zoneHTML('solumed-p', gp([[873,448],[1262,448],[1262,828],[1054,828],[1054,667],[873,667]]), 1440, 330, ['Solumed'], 'Wizyty prywatne', DX.solumed);
+  h += zoneHTML('apteka', gp([[1262,448],[1650,448],[1650,828],[1262,828]]), gx(1456), 330, ['Apteka', 'Vivre'], 'Róg budynku', DX.vivre);
+  h += `</g>`;
+  // hol
+  h += `<rect class="hall" x="52" y="60" width="866" height="740" rx="4"/>`;
+  h += `<rect x="52" y="60" width="866" height="16" fill="#087838" opacity=".75"/>`;
+  h += `<text class="tx s" x="485" y="104" text-anchor="middle">ŚCIANA Z ZIELENIĄ</text>`;
+  // wiatrołap i wejście główne
+  h += `<rect x="711" y="800" width="207" height="${FY - 800}" fill="#F4F7F5" stroke="#404040" stroke-width="4"/>`;
+  h += `<line class="door" x1="711" x2="918" y1="800" y2="800" stroke-dasharray="18 8"/><line class="door" x1="711" x2="918" y1="${FY}" y2="${FY}" stroke-dasharray="18 8"/>`;
+  h += `<text class="tx s" transform="translate(745 935) rotate(-90)" text-anchor="middle">WIATROŁAP</text>`;
+  // klatka schodowa z przedsionkiem pożarowym
+  h += `<g class="${cls('schody', '')}" data-id="schody" tabindex="0" role="button" aria-label="Schody"><rect class="obj" x="918" y="627" width="496" height="${FY - 627}" rx="4"/>`;
+  h += `<rect x="918" y="635" width="143" height="130" fill="#fff" stroke="#404040" stroke-width="3"/>`;
+  for (let i = 0; i < 12; i++) h += `<line x1="1075" x2="1395" y1="${790 + i * 20}" y2="${790 + i * 20}" stroke="#404040" stroke-opacity=".4" stroke-width="2"/>`;
+  h += `<text class="tx" x="1235" y="935" text-anchor="middle" stroke="#E7ECE9" stroke-width="8" paint-order="stroke" style="font-size:30px">SCHODY</text></g>`;
+  h += `<line class="door" x1="918" x2="918" y1="672" y2="742"/>`;
+  h += `<line x1="1000" x2="1090" y1="${FY}" y2="${FY}" stroke="#1E8A3A" stroke-width="8" stroke-linecap="round"/><text class="tx s" x="1044" y="1040" text-anchor="middle" style="font-size:13px;letter-spacing:.04em">WYJŚCIE EWAKUACYJNE</text>`;
+  // recepcja (lada w kształcie litery V), krzesła za ladą, totem
+  const rp = gp([[619,550],[690,566],[793,519]]);
+  h += `<g class="${cls('recepcja', '')}" data-id="recepcja" tabindex="0" role="button" aria-label="Recepcja"><polyline points="${rp}" fill="none" stroke="#404040" stroke-width="64" stroke-linejoin="round" stroke-linecap="round" class="recfill-o"/><polyline points="${rp}" fill="none" stroke="#fff" stroke-width="54" stroke-linejoin="round" stroke-linecap="round" class="recfill-i"/><text class="tx" x="330" y="340" text-anchor="middle" transform="rotate(12 330 340)" style="font-size:24px;letter-spacing:.2em">RECEPCJA</text></g>`;
+  [[346, 255], [456, 244], [543, 203]].forEach(([cx, cy]) => { h += `<rect x="${cx - 16}" y="${cy - 16}" width="32" height="32" rx="7" fill="#fff" stroke="#404040" stroke-width="2.5" pointer-events="none"/>`; });
+  h += `<line x1="764" y1="299" x2="860" y2="324" stroke="#50B058" stroke-width="14" stroke-linecap="round"/><text class="tx s" x="812" y="278" text-anchor="middle" style="font-size:16px">TOTEM</text>`;
+  h += `<rect class="obj" x="790" y="390" width="60" height="230" rx="8"/>`;
+  for (let i = 0; i < 5; i++) h += `<rect x="802" y="${402 + i * 44}" width="36" height="32" rx="6" fill="#fff" stroke="#404040" stroke-width="2"/>`;
+  h += `<text class="tx s" x="820" y="380" text-anchor="middle">KRZESŁA</text>`;
+  // windy, parkomat, dwa tablety
+  h += `<rect class="obj" x="52" y="800" width="659" height="253"/>`;
   [3, 2, 1].forEach(n => {
-    const x = LX[n] - 45, on = liftOn(n);
-    h += `<rect class="lift${on ? ' on' : ''}" x="${x}" y="588" width="90" height="66"/><text class="liftn${on ? ' on' : ''}" x="${LX[n]}" y="636" text-anchor="middle">${n}</text>`;
+    const on = liftOn(n);
+    h += `<rect class="lift${on ? ' on' : ''}" x="${LX[n] - 81}" y="814" width="162" height="236"/><text class="liftn${on ? ' on' : ''}" x="${LX[n]}" y="900" text-anchor="middle">${n}</text>`;
   });
-  // dwa tablety przy windach
-  [[543, 'TABLET 1'], [211, 'TABLET 2']].forEach(([tx, nm]) => { h += `<rect class="tab" x="${tx - 14}" y="548" width="28" height="22" rx="3"/><text class="tx s" x="${tx}" y="540" text-anchor="middle" style="font-size:13px">${nm}</text>`; });
-  // parkomat i kiosk
-  h += `<rect class="obj" x="80" y="560" width="84" height="86" rx="6"/><text class="tx s" x="122" y="608" text-anchor="middle" style="font-size:12px;letter-spacing:.02em">PARKOMAT</text>`;
+  h += `<rect class="obj" x="52" y="819" width="91" height="140" rx="6"/><text class="tx s" x="97" y="895" text-anchor="middle" style="font-size:13px;letter-spacing:.02em">PARKOMAT</text>`;
+  [[525, 'TABLET 1'], [164, 'TABLET 2']].forEach(([tx, nm]) => { h += `<rect class="tab" x="${tx - 14}" y="766" width="28" height="22" rx="3"/><text class="tx s" x="${tx}" y="756" text-anchor="middle" style="font-size:13px">${nm}</text>`; });
+  // kioski
   [1, 2, 3].forEach(n => {
     const q = KIOSKS[n], me = q === K;
     h += `<g pointer-events="none"><rect class="kiosk${me ? ' me' : ''}" x="${q.x - 15}" y="${q.y - 30}" width="30" height="60" rx="6"/><rect class="kscr" x="${q.x + 3}" y="${q.y - 22}" width="7" height="44" rx="2"/>` +
       `<text class="tx" x="${q.x - 3}" y="${q.y + 7}" text-anchor="middle" style="font-size:17px;letter-spacing:0">${n}</text></g>`;
   });
-
   // trasa
   if (sel) {
     const p = routePts(sel), pts = p.map(q => q.join(',')).join(' ');
@@ -416,7 +430,7 @@ function renderMap() {
     if (pin) h += pinHTML(pin);
     if (sel.type === 'lift') {
       const l1 = sel.lift === '3' ? 'WINDA 3' : 'WINDA 1–2', l2 = floorLabel(sel.floor).toUpperCase();
-      h += `<g pointer-events="none"><rect class="call" x="680" y="584" width="124" height="70" rx="12"/><text class="call-t" x="742" y="613" text-anchor="middle" style="font-size:20px">${l1}</text><text class="call-t" x="742" y="640" text-anchor="middle" style="font-size:20px">${l2}</text></g>`;
+      h += `<g pointer-events="none"><rect class="call" x="740" y="650" width="124" height="70" rx="12"/><text class="call-t" x="802" y="679" text-anchor="middle" style="font-size:20px">${l1}</text><text class="call-t" x="802" y="706" text-anchor="middle" style="font-size:20px">${l2}</text></g>`;
     }
   }
   // JESTEŚ TUTAJ
@@ -515,12 +529,12 @@ document.addEventListener('touchmove', e => { if (document.body.classList.contai
 ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => { if (document.body.classList.contains('is-tab')) e.preventDefault(); }));
 
 /* ================= KAMERA ================= */
-const VIEWS = { hall:[-260,20,1530,1110], west:[-450,-20,1500,1090], east:[650,-20,1500,1090], all:[-470,-30,2600,1150] };
+const VIEWS = { hall:[-120,-20,1700,1260], west:[-900,-40,1900,1380], mid:[600,-40,1800,1307], east:[700,-40,2400,1743], all:[-1130,-40,4260,1400] };
 let cur = VIEWS.hall.slice(), raf = 0, overview = false;
 const wantView = () => {
   if (overview) return VIEWS.all;
   const d = state.id ? BY.get(state.id) : null;
-  if (d && d.type === 'out') return d.door === 'scanmed' ? VIEWS.west : VIEWS.east;
+  if (d && d.type === 'out') return d.door === 'scanmed' ? VIEWS.west : d.door === 'solumed' ? VIEWS.mid : VIEWS.east;
   return VIEWS.hall;
 };
 function goView(instant) {
